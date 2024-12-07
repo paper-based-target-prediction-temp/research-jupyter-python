@@ -1,4 +1,5 @@
 data/*
+src/data/pubmed-api/test/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/jupyternotebooks,python,visualstudiocode,macos
