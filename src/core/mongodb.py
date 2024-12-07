@@ -12,3 +12,12 @@ class MongoDB:
 
 
 db = MongoDB()
+
+
+if __name__ == "__main__":
+    """ping test"""
+    try:
+        db.client.admin.command("ping")
+        print("MongoDB 연결 성공")
+    except Exception as e:
+        print(f"MongoDB 연결 실패: {e}")

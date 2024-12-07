@@ -3,6 +3,8 @@ import requests
 import os
 import xml.etree.ElementTree as ET
 import time
+from src.core.mongodb import db as mongo_db
+from src.core.config import settings
 
 
 class PubMedAPI:
@@ -120,15 +122,35 @@ class PubMedAPI:
             )
         return results
 
+    def batch_fetch_and_store(
+        self, term, retmax, batch_size, collection_name="pubmed_articles"
+    ):
+        """
+        Fetch a large number of PMIDs for the given term and store details in MongoDB in batches.
+        """
+        print(f"Searching for PMIDs with term: {term}")
+        pmids = self.search_ids(term, retmax=retmax)
+        print(f"Found {len(pmids)} PMIDs")
+        print(f"Fetching and storing details for {len(pmids)} PMIDs")
+        # Split into chunks of batch_size
+        for i in range(0, len(pmids), batch_size):
+            chunk = pmids[i : i + batch_size]
+            details = self.fetch_details(chunk)
+            if details:
+                # Insert into MongoDB
+                collection = mongo_db.get_collection(collection_name)
+                collection.insert_many(details)  # list로 db에 한번에 저장
+                print(f"Inserted {len(details)} documents into {collection_name}")
 
-def main():
+
+def main_get_abstract():
     load_dotenv()
     pubmed_api_key = os.getenv("PUBMED_API_KEY")
     pubmed = PubMedAPI(api_key=pubmed_api_key)
 
     # Step 1: Search for PMIDs
-    search_term = "EGFR"
-    pmids = pubmed.search_ids(term=search_term, retmax=3)
+    term = "EGFR"
+    pmids = pubmed.search_ids(term=term, retmax=3)
     print(f"PMIDs: {pmids}")
 
     # Step 2: Fetch details for the PMIDs
@@ -137,6 +159,19 @@ def main():
         print(detail)
 
 
-# Example usage
+def main_save_abstract():
+    # .env 등에 저장된 PUBMED_API_KEY를 불러와 사용한다고 가정
+    api_key = settings.PUBMED_API_KEY
+    term = "EGFR"  # 검색어 예시
+    retmax = 20
+    batch_size = 10
+    collection_name = "pubmed_articles"
+
+    pubmed_api = PubMedAPI(api_key=api_key)
+    pubmed_api.batch_fetch_and_store(
+        term, retmax=retmax, batch_size=batch_size, collection_name=collection_name
+    )
+
+
 if __name__ == "__main__":
-    main()
+    main_save_abstract()
